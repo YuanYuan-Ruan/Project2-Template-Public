@@ -126,6 +126,8 @@ public class Pinochle extends CardGame {
     /**
      * Score Section
      */
+    private boolean AdditionalMeld;
+    private boolean SmartBid;
 
     private void initScore() {
         for (int i = 0; i < nbPlayers; i++) {
@@ -194,9 +196,167 @@ public class Pinochle extends CardGame {
         return null;
     }
 
+    // Check Additional Meld - 9 of the Trump Suit
+    private List<String> checkDix(List<Card> list) {
+        String dixCard = Rank.NINE.getRankCardValue() + trumpSuit;
+        if (checkCardInList(list, List.of(dixCard))) {
+            return List.of(dixCard);
+        }
+        return null;
+    }
+
+    // Check Additional Meld - Two Runs in the Trump Suit
+    private List<String> checkDoubleRun(List<Card> list) {
+        List<String> cards = new ArrayList<>();
+        for (int i = 0; i < 2; i++) {
+            cards.add(Rank.TEN.getRankCardValue() + trumpSuit);
+            cards.add(Rank.JACK.getRankCardValue() + trumpSuit);
+            cards.add(Rank.QUEEN.getRankCardValue() + trumpSuit);
+            cards.add(Rank.KING.getRankCardValue() + trumpSuit);
+            cards.add(Rank.ACE.getRankCardValue() + trumpSuit);
+        }
+        if (checkCardInList(list, cards)) return cards;
+        return null;
+    }
+
+    // Check Additional Meld - One Ace of each Suit
+    private List<String> checkAcesAround(List<Card> list) {
+        List<String> cards = new ArrayList<>();
+        for (Suit suit : Suit.values()) {
+            cards.add(Rank.ACE.getRankCardValue() + suit.getSuitShortHand());
+        }
+        if (checkCardInList(list, cards)) return cards;
+        return null;
+    }
+
+    // Check Additional Meld - All 8 Jacks
+    private List<String> checkJacksAbound(List<Card> list) {
+        List<String> cards = new ArrayList<>();
+        for (Suit suit : Suit.values()) {
+            cards.add(Rank.JACK.getRankCardValue() + suit.getSuitShortHand());
+            cards.add(Rank.JACK.getRankCardValue() + suit.getSuitShortHand());
+        }
+        if (checkCardInList(list, cards)) return cards;
+        return null;
+    }
+
+    // Check Additional Meld - King and Queen of the Non-Trump Suit
+    private List<String> checkCommonMarriage(List<Card> list) {
+        for (Suit suit : Suit.values()) {
+            if (!suit.getSuitShortHand().equals(trumpSuit)) {
+                List<String> cards = List.of(
+                        Rank.QUEEN.getRankCardValue() + suit.getSuitShortHand(),
+                        Rank.KING.getRankCardValue() + suit.getSuitShortHand()
+                );
+                if (checkCardInList(list, cards)) return cards;
+            }
+        }
+        return null;
+    }
+
+    // Check Additional Meld - Jack of Diamonds and Queen of Spades
+    private List<String> checkPinochle(List<Card> list) {
+        List<String> cards = List.of(
+                Rank.JACK.getRankCardValue() + Suit.DIAMONDS.getSuitShortHand(),
+                Rank.QUEEN.getRankCardValue() + Suit.SPADES.getSuitShortHand()
+        );
+        if (checkCardInList(list, cards)) return cards;
+        return null;
+    }
+
+    // Check Additional Meld - Both Jacks of Diamonds and Queen of Spades
+    private List<String> checkDoublePinochle(List<Card> list) {
+        List<String> cards = List.of(
+                Rank.JACK.getRankCardValue() + Suit.DIAMONDS.getSuitShortHand(),
+                Rank.JACK.getRankCardValue() + Suit.DIAMONDS.getSuitShortHand(),
+                Rank.QUEEN.getRankCardValue() + Suit.SPADES.getSuitShortHand(),
+                Rank.QUEEN.getRankCardValue() + Suit.SPADES.getSuitShortHand()
+        );
+        if (checkCardInList(list, cards)) return cards;
+        return null;
+    }
+
+    // Check Additional Meld - Ace, King and Queen of the Trump Suit
+    private List<String> checkAceRunWithRoyalMarriage(List<Card> list) {
+        List<String> cards = List.of(
+            Rank.TEN.getRankCardValue() + trumpSuit,
+            Rank.JACK.getRankCardValue() + trumpSuit,
+            Rank.QUEEN.getRankCardValue() + trumpSuit,
+            Rank.QUEEN.getRankCardValue() + trumpSuit,
+            Rank.KING.getRankCardValue() + trumpSuit,
+            Rank.KING.getRankCardValue() + trumpSuit,
+            Rank.ACE.getRankCardValue() + trumpSuit
+        );
+        if (checkCardInList(list, cards)) return cards;
+        return null;
+    }
+
+
+
     private int calculateMeldingScore(List<Card> list) {
         int score = 0;
-        List<String> cardsToRemove = checkAceRunExtraKing(list);
+        List<String> cardsToRemove;
+
+        // Task 1 - Support for Additional Melds
+        if (AdditionalMeld) {
+            // Double Run
+            cardsToRemove = checkDoubleRun(list);
+            if (cardsToRemove != null) {
+                score += 1500;
+                list = removeCardFromList(list, cardsToRemove);
+            }
+
+            // Jacks Abound
+            cardsToRemove = checkJacksAbound(list);
+            if (cardsToRemove != null) {
+                score += 400;
+                list = removeCardFromList(list, cardsToRemove);
+            }
+
+            // Double Pinochle
+            cardsToRemove = checkDoublePinochle(list);
+            if (cardsToRemove != null) {
+                score += 300;
+                list = removeCardFromList(list, cardsToRemove);
+            }
+
+            // Ace Run + Royal Marriage
+            cardsToRemove = checkAceRunWithRoyalMarriage(list);
+            if (cardsToRemove != null) {
+                score += 230;
+                list = removeCardFromList(list, cardsToRemove);
+            }
+
+            // Aces Around
+            cardsToRemove = checkAcesAround(list);
+            if (cardsToRemove != null) {
+                score += 100;
+                list = removeCardFromList(list, cardsToRemove);
+            }
+
+            // Pinochle
+            cardsToRemove = checkPinochle(list);
+            if (cardsToRemove != null) {
+                score += 40;
+                list = removeCardFromList(list, cardsToRemove);
+            }
+
+            // Common Marriage
+            cardsToRemove = checkCommonMarriage(list);
+            if (cardsToRemove != null) {
+                score += 20;
+                list = removeCardFromList(list, cardsToRemove);
+            }
+
+            // Dix
+            cardsToRemove = checkDix(list);
+            if (cardsToRemove != null) {
+                score += 10;
+                list = removeCardFromList(list, cardsToRemove);
+            }
+        }
+        // No Additional Melds
+        cardsToRemove = checkAceRunExtraKing(list);
         if (cardsToRemove != null) {
             score += 190;
             list = removeCardFromList(list, cardsToRemove);
@@ -218,6 +378,8 @@ public class Pinochle extends CardGame {
             score += 40;
             list = removeCardFromList(list, cardsToRemove);
         }
+
+        System.out.println("Final meld score: " + score);
         return score;
     }
 
@@ -568,9 +730,17 @@ public class Pinochle extends CardGame {
                 bidValue = computerAutoBids.get(computerAutoBidIndex);
                 computerAutoBidIndex++;
             } else {
-                Random random = new Random();
-                int randomBidBase = random.nextInt(3);
-                bidValue = randomBidBase * 10;
+                if (!SmartBid) {
+                    Random random = new Random();
+                    int randomBidBase = random.nextInt(3);
+                    bidValue = randomBidBase * 10;
+                } else {
+                    boolean FirstBid = false;
+                    if (currentBid == 0) {
+                        FirstBid = true;
+                    }
+                    bidValue = CalculateSmartBid(currentBid, hands[COMPUTER_PLAYER_INDEX], FirstBid);
+                }
             }
 
             updateBidText(playerIndex, currentBid + bidValue);
@@ -603,6 +773,98 @@ public class Pinochle extends CardGame {
             hasHumanBid = true;
         }
     }
+
+    // calculate smart bid for computer
+    private int CalculateSmartBid(int currentBid, Hand hand, boolean FirstBid) {
+        List<Card> cards = hand.getCardList();
+
+        if (SmartBid) {
+            trumpSuit = findBestTrumpSuit(hand);
+        }
+
+        // If first bidder, bid meld score
+        if (FirstBid) {
+            return calculateMeldingScore(cards);
+        }
+
+        // Count suits - organized like this:
+        //  "C": [10♣, J♣, A♣],
+        //  "D": [K♦, A♦],
+        //  "H": [9♥, Q♥, J♥],
+        //  "S": [K♠, 9♠]
+        Map<String, List<Card>> suitToCards = new HashMap<>();
+        for (Card card : cards) {
+            String suit = ((Suit) card.getSuit()).getSuitShortHand();
+            suitToCards.computeIfAbsent(suit, k -> new ArrayList<>()).add(card);
+        }
+
+        // Calculate total score of the majority suit (the chosen trump suit)
+        int majoritySuitScore = 0;
+        for (Card card : cards) {
+            String suit = ((Suit) card.getSuit()).getSuitShortHand();
+            if (suit.equals(trumpSuit)) {
+                majoritySuitScore += ((Rank) card.getRank()).getScoreValue();
+            }
+        }
+
+        // Find the suit that has the most A, 10, K
+        int highRankSuitScore = 0;   // total score of all high rank suits
+        int maxHighRanks = 0;  // how many Aces/10s/Kings it has
+
+        for (List<Card> suitCards : suitToCards.values()) {
+            int countHighRanks = 0;
+            for (Card card : suitCards) {
+                Rank rank = ((Rank) card.getRank());
+                if (rank == Rank.ACE || rank == Rank.TEN || rank == Rank.KING) {
+                    countHighRanks++;
+                }
+            }
+
+            // If this suit has more high-rank cards than any previous suit, update
+            if (countHighRanks > maxHighRanks) {
+                maxHighRanks = countHighRanks;
+                highRankSuitScore = 0;
+                for (Card card : suitCards) {
+                    highRankSuitScore += ((Rank) card.getRank()).getScoreValue();
+                }
+            }
+        }
+
+        // Calculate the threshold, stop raising bid when excess the threshold
+        int meldScore = calculateMeldingScore(cards);
+        int threshold = meldScore + Math.max(majoritySuitScore, highRankSuitScore);
+
+        // Decide raise amount: 20 if trump suit has 6+ cards, else 10
+        int plannedRaise = suitToCards.get(trumpSuit).size() >= 6 ? 20 : 10;
+        int newBid = currentBid + plannedRaise;
+
+        return newBid < threshold ? plannedRaise : 0;
+
+
+
+    }
+
+    // find the suit with the highest number of cards in your hand
+    private String findBestTrumpSuit(Hand hand) {
+        // Count occurrences of each suit
+        Map<String, Long> suitCounts = hand.getCardList().stream()
+                .map(card -> ((Suit) card.getSuit()).getSuitShortHand())
+                .collect(Collectors.groupingBy(suit -> suit, Collectors.counting()));
+
+        // Find the highest count value from the suit count map
+        long maxCount = Collections.max(suitCounts.values());
+
+        // Collect all suits that have the maximum count
+        List<String> candidateTrumpSuits = suitCounts.entrySet().stream()
+                .filter(entry -> entry.getValue() == maxCount)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        // Randomly choose one of the candidates if there's a tie
+        return candidateTrumpSuits.get(random.nextInt(candidateTrumpSuits.size()));
+    }
+
+
 
     private void askForBid() {
         initBids();
@@ -1061,6 +1323,9 @@ public class Pinochle extends CardGame {
         isAuto = Boolean.parseBoolean(properties.getProperty("isAuto"));
         thinkingTime = Integer.parseInt(properties.getProperty("thinkingTime", "200"));
         delayTime = Integer.parseInt(properties.getProperty("delayTime", "50"));
+
+        AdditionalMeld = Boolean.parseBoolean(properties.getProperty("melds.additional", "false"));
+        SmartBid = Boolean.parseBoolean(properties.getProperty("players.0.smartbids", "false"));
     }
 
 }
